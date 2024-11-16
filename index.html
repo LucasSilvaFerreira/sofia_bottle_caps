@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>QR Code Holographic Gallery</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Include the html5-qrcode library -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    :root {
+      --foil-brightness: 0.55;
+    }
+
+    body {
+      background-color: #151617;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      background-image: url('https://raw.githubusercontent.com/LucasSilvaFerreira/sofia_bottle_caps/main/images/app/lucasferreira7182_httpss.mj.runZijTqA9kCHk_httpss.mj.runoveY4_aff76ff4-5436-4510-a440-934f4758cdeb_1%20(1).png');
+      background-size: cover;
+      background-position: center;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 24px;
+      text-align: center;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    #buttons {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+    }
+
+    #buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      color: white;
+      background-color: #2196F3;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #buttons button:active {
+      background-color: #1976D2;
+    }
+
+    #content {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    #qr-reader {
+      width: 100%;
+    }
+
+    #progress {
+      margin: 20px 0;
+      font-size: 18px;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    #gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      position: relative;
+      width: calc(100% - 20px);
+      max-width: 367px;
+      height: auto;
+      aspect-ratio: 367 / 512;
+      background-size: cover;
+      background-position: center;
+      border-radius: 18px;
+      overflow: hidden;
+      margin: 10px;
+
+      transition: transform 0.1s ease, box-shadow 0.3s ease, opacity 0.5s ease, background-color 0.5s ease;
+      will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
+
+      transform-style: preserve-3d;
+      transform-origin: center;
+    }
+
+    .card:hover {
+      transform: rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg)) scale(1.05);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 1); 
+    }
+
+    .card__glare, .card__shine {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .card__glare {
+      transform: translateZ(1.41px);
+      overflow: hidden;
+      background-image: 
+        radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), 
+        hsla(0, 0%, 100%, 0.8) 10%, 
+        hsla(0, 0%, 100%, 0.5) 20%, hsla(0, 0%, 0%, 0.75) 90%);
+      mix-blend-mode: overlay;
+      filter: brightness(.7) contrast(1.5);
+
+      pointer-events: none;
+
+      opacity: var(--card-opacity);
+
+      transition: opacity 0.3s ease;
+      will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
+    }
+
+    .card__shine {
+      background-image: 
+        radial-gradient(circle at var(--pointer-x) var(--pointer-y), #fff 5%, #000 50%, #fff 80%), 
+        linear-gradient(-60deg, rgba(0,0,0,1) 15%, rgba(255,255,255,1), rgba(0,0,0,1) 85%),
+        /* Foil texture image as base64 data URI */
+        url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...');
+      background-size: 
+        120% 120%, 
+        200% 200%, 
+        cover;
+      background-position: 
+        center center, 
+        calc( (100% * var(--pointer-from-left))) calc( (100% * var(--pointer-from-top))), 
+        center center;
+      background-blend-mode: soft-light, difference;
+      filter: brightness(var(--foil-brightness)) contrast(1.5) saturate(1);
+      mix-blend-mode: color-dodge;
+      pointer-events: none;
+
+      opacity: calc((1.5 * var(--card-opacity)) - var(--pointer-from-center));
+
+      /* Mask image as base64 data URI */
+      mask-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...');
+      mask-size: cover;
+      mask-position: center center;
+
+      transition: opacity 0.3s ease;
+      will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>QR Code Holographic Gallery</h1>
+  <div id="buttons">
+    <button id="scan-button">Scan QR Code</button>
+    <button id="gallery-button">View Gallery</button>
+    <button id="reset-button">Reset Progress</button>
+  </div>
+  <div id="content">
+    <!-- The QR scanner or gallery will be displayed here -->
+  </div>
+  <div id="progress">Loading images...</div>
+
+  <script>
+    // Number of total images
+    let TOTAL_IMAGES = 0;
+
+    // Placeholder images (will be filled dynamically)
+    let imagePlaceholders = [];
+
+    // Arrays to store scanned QR codes and assigned images
+    let scannedCodes = [];
+    let assignedImages = [];
+    let allImagesCollected = false;
+
+    // Get references to buttons and content area
+    const scanButton = document.getElementById('scan-button');
+    const galleryButton = document.getElementById('gallery-button');
+    const resetButton = document.getElementById('reset-button');
+    const contentDiv = document.getElementById('content');
+    const progressDiv = document.getElementById('progress');
+
+    // Event listeners for buttons
+    scanButton.addEventListener('click', startScan);
+    galleryButton.addEventListener('click', showGallery);
+    resetButton.addEventListener('click', resetGallery);
+
+    let html5QrCode;
+
+    // Fetch images from GitHub repository using jsDelivr API
+    async function fetchImages() {
+      const apiUrl = 'https://data.jsdelivr.com/v1/package/gh/LucasSilvaFerreira/sofia_bottle_caps@main/files/images/cards';
+
+      try {
+        const response = await fetch(apiUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch images from jsDelivr API');
+        }
+        const data = await response.json();
+
+        // Filter only image files
+        imagePlaceholders = data.files
+          .filter(item => !item.type && /\.(png|jpe?g|gif)$/i.test(item.name))
+          .map(item => 'https://cdn.jsdelivr.net/gh/LucasSilvaFerreira/sofia_bottle_caps@main/images/cards/' + item.name);
+
+        TOTAL_IMAGES = imagePlaceholders.length;
+        loadProgress();
+        updateProgress();
+      } catch (error) {
+        console.error('Error fetching images:', error);
+        progressDiv.textContent = 'Failed to load images.';
+      }
+    }
+
+    // Start the QR code scanner
+    function startScan() {
+      contentDiv.innerHTML = '<div id="qr-reader" style="width: 100%;"></div>';
+      html5QrCode = new Html5Qrcode("qr-reader");
+
+      const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+        // Handle the result here.
+        onScanSuccess(decodedText, decodedResult);
+        // Once a code is successfully scanned, stop scanning
+        html5QrCode.stop().then(ignore => {
+          // QR Code scanning is stopped.
+        }).catch(err => {
+          // Stop failed, handle it.
+          console.error('Unable to stop scanning', err);
+        });
+      };
+
+      const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+      // Start scanning.
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        qrCodeSuccessCallback
+      ).catch(err => {
+        // Start failed, handle it.
+        console.error('Unable to start scanning', err);
+        alert('Unable to access the camera. Please allow camera permissions.');
+      });
+    }
+
+    // Show the gallery
+    function showGallery() {
+      contentDiv.innerHTML = '<div id="gallery"></div>';
+      updateGallery();
+    }
+
+    // Handle successful scan
+    function onScanSuccess(decodedText, decodedResult) {
+      if (!scannedCodes.includes(decodedText)) {
+        // New QR code scanned
+        scannedCodes.push(decodedText);
+        let imageNumber = scannedCodes.length;
+        if (imageNumber <= TOTAL_IMAGES) {
+          assignedImages.push(imagePlaceholders[imageNumber - 1]);
+          updateProgress();
+          saveProgress();
+          showCollectAnimation(imageNumber);
+        } else {
+          // All images have been collected
+          if (!allImagesCollected) {
+            allImagesCollected = true;
+            alert('Congratulations! You have collected all images.');
+          }
+        }
+      } else {
+        // QR code already scanned; do nothing or provide a subtle indication
+        console.log('QR code already scanned.');
+      }
+    }
+
+    // Update the progress indicator
+    function updateProgress() {
+      let count = assignedImages.length;
+      progressDiv.textContent = `${count}/${TOTAL_IMAGES} images discovered`;
+    }
+
+    // Update the gallery with discovered images
+    function updateGallery() {
+      let gallery = document.getElementById('gallery');
+      gallery.innerHTML = ''; // Clear existing images
+      assignedImages.forEach(src => {
+        // Create card element
+        let card = document.createElement('div');
+        card.classList.add('card');
+        card.style.backgroundImage = `url(${src})`;
+
+        // Create glare and shine elements
+        let glare = document.createElement('div');
+        glare.classList.add('card__glare');
+        let shine = document.createElement('div');
+        shine.classList.add('card__shine');
+
+        // Append glare and shine to card
+        card.appendChild(glare);
+        card.appendChild(shine);
+
+        // Add event listeners for holographic effect
+        card.addEventListener('pointermove', handlePointerMove);
+        card.addEventListener('touchmove', handlePointerMove);
+        card.addEventListener('mouseleave', handlePointerLeave);
+        card.addEventListener('touchend', handlePointerLeave);
+
+        gallery.appendChild(card);
+      });
+    }
+
+    // Handle pointer move for holographic effect
+    function handlePointerMove(e) {
+      e.preventDefault();
+      const card = e.currentTarget;
+      const rect = card.getBoundingClientRect();
+      let x, y;
+
+      if (e.touches && e.touches.length > 0) {
+        x = e.touches[0].clientX - rect.left;
+        y = e.touches[0].clientY - rect.top;
+      } else {
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+      }
+
+      const pointerFromLeft = x / rect.width;
+      const pointerFromTop = y / rect.height;
+
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const distX = x - centerX;
+      const distY = y - centerY;
+      const distance = Math.sqrt(distX * distX + distY * distY);
+
+      const maxDistance = Math.sqrt((rect.width / 2) ** 2 + (rect.height / 2) ** 2);
+      const pointerFromCenter = distance / maxDistance;
+      let opacity = 1 - (distance / maxDistance);
+      opacity = opacity ** 0.2;
+
+      const rotateX = (distY / rect.height) * 30;
+      const rotateY = (distX / rect.width) * -20;
+
+      card.style.setProperty('--pointer-x', `${x}px`);
+      card.style.setProperty('--pointer-y', `${y}px`);
+      card.style.setProperty('--pointer-from-left', pointerFromLeft);
+      card.style.setProperty('--pointer-from-top', pointerFromTop);
+      card.style.setProperty('--pointer-from-center', pointerFromCenter.toFixed(2));
+      card.style.setProperty('--card-opacity', opacity.toFixed(2));
+      card.style.setProperty('--rotate-x', `${rotateX}deg`);
+      card.style.setProperty('--rotate-y', `${rotateY}deg`);
+    }
+
+    // Handle pointer leave for holographic effect
+    function handlePointerLeave(e) {
+      const card = e.currentTarget;
+      card.style.setProperty('--card-opacity', 0);
+      card.style.setProperty('--rotate-x', '0deg');
+      card.style.setProperty('--rotate-y', '0deg');
+    }
+
+    // Show animation when a new card is collected
+    function showCollectAnimation(imageNumber) {
+      // Optionally, implement a custom animation
+      alert(`You have collected a new card! (${imageNumber}/${TOTAL_IMAGES})`);
+      // Redirect to the gallery
+      showGallery();
+    }
+
+    // Save progress to localStorage
+    function saveProgress() {
+      localStorage.setItem('scannedCodes', JSON.stringify(scannedCodes));
+      localStorage.setItem('assignedImages', JSON.stringify(assignedImages));
+    }
+
+    // Load progress from localStorage
+    function loadProgress() {
+      const savedScannedCodes = JSON.parse(localStorage.getItem('scannedCodes')) || [];
+      const savedAssignedImages = JSON.parse(localStorage.getItem('assignedImages')) || [];
+
+      // Ensure that saved assigned images correspond to current image placeholders
+      assignedImages = savedAssignedImages.filter(src => imagePlaceholders.includes(src));
+      scannedCodes = savedScannedCodes.slice(0, assignedImages.length);
+
+      updateProgress();
+    }
+
+    // Reset the gallery and clear saved data
+    function resetGallery() {
+      if (confirm('Are you sure you want to reset the progress? This will remove all collected cards.')) {
+        scannedCodes = [];
+        assignedImages = [];
+        allImagesCollected = false;
+        saveProgress();
+        updateProgress();
+        contentDiv.innerHTML = ''; // Clear the content area
+        alert('Progress has been reset.');
+      }
+    }
+
+    // Fetch images on page load
+    window.onload = () => {
+      fetchImages();
+    };
+  </script>
+</body>
+</html>
