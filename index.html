@@ -7,7 +7,149 @@
   <!-- Include the html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    /* [Your CSS styles here, including embedded Base64 images for the foil texture and mask] */
+    :root {
+      --foil-brightness: 0.55;
+    }
+
+    body {
+      background-color: #151617;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
+      background-image: url('assets/app-image.png'); /* Update with your app image */
+      background-size: cover;
+      background-position: center;
+    }
+
+    h1 {
+      margin-top: 20px;
+      font-size: 24px;
+      text-align: center;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    #buttons {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+    }
+
+    #buttons button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      color: white;
+      background-color: #2196F3;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    #buttons button:active {
+      background-color: #1976D2;
+    }
+
+    #content {
+      width: 100%;
+      max-width: 500px;
+    }
+
+    #qr-reader {
+      width: 100%;
+    }
+
+    #progress {
+      margin: 20px 0;
+      font-size: 18px;
+      text-shadow: 1px 1px 2px #000;
+    }
+
+    #gallery {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      position: relative;
+      width: calc(100% - 20px);
+      max-width: 367px;
+      height: auto;
+      aspect-ratio: 367 / 512;
+      background-size: cover;
+      background-position: center;
+      border-radius: 18px;
+      overflow: hidden;
+      margin: 10px;
+
+      transition: transform 0.1s ease, box-shadow 0.3s ease, opacity 0.5s ease, background-color 0.5s ease;
+      will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
+
+      transform-style: preserve-3d;
+      transform-origin: center;
+    }
+
+    .card:hover {
+      transform: rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg)) scale(1.05);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 1); 
+    }
+
+    .card__glare, .card__shine {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .card__glare {
+      transform: translateZ(1.41px);
+      overflow: hidden;
+      background-image: 
+        radial-gradient(farthest-corner circle at var(--pointer-x) var(--pointer-y), 
+        hsla(0, 0%, 100%, 0.8) 10%, 
+        hsla(0, 0%, 100%, 0.5) 20%, hsla(0, 0%, 0%, 0.75) 90%);
+      mix-blend-mode: overlay;
+      filter: brightness(.7) contrast(1.5);
+
+      pointer-events: none;
+
+      opacity: var(--card-opacity);
+
+      transition: opacity 0.3s ease;
+      will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
+    }
+
+    .card__shine {
+      background-image: 
+        radial-gradient(circle at var(--pointer-x) var(--pointer-y), #fff 5%, #000 50%, #fff 80%), 
+        linear-gradient(-60deg, rgba(0,0,0,1) 15%, rgba(255,255,255,1), rgba(0,0,0,1) 85%),
+        url('assets/foil-texture.png'); /* Path to foil texture */
+      background-size: 
+        120% 120%, 
+        200% 200%, 
+        cover;
+      background-position: 
+        center center, 
+        calc( (100% * var(--pointer-from-left))) calc( (100% * var(--pointer-from-top))), 
+        center center;
+      background-blend-mode: soft-light, difference;
+      filter: brightness(var(--foil-brightness)) contrast(1.5) saturate(1);
+      mix-blend-mode: color-dodge;
+      pointer-events: none;
+
+      opacity: calc((1.5 * var(--card-opacity)) - var(--pointer-from-center));
+
+      mask-image: url('assets/foil-mask.png'); /* Path to foil mask */
+      mask-size: cover;
+      mask-position: center center;
+
+      transition: opacity 0.3s ease;
+      will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
+    }
   </style>
 </head>
 <body>
@@ -51,7 +193,7 @@
 
     // Fetch images from cards.json
     async function fetchImages() {
-      const jsonUrl = 'images/cards.json';
+      const jsonUrl = 'assets/cards.json';
 
       try {
         const response = await fetch(jsonUrl);
@@ -61,7 +203,7 @@
         const data = await response.json();
 
         // Construct image URLs
-        imagePlaceholders = data.map(filename => 'images/cards/' + filename);
+        imagePlaceholders = data.map(filename => 'assets/' + filename);
 
         TOTAL_IMAGES = imagePlaceholders.length;
         loadProgress();
@@ -171,12 +313,52 @@
 
     // Handle pointer move for holographic effect
     function handlePointerMove(e) {
-      // [Your existing code for handling pointer movements]
+      e.preventDefault();
+      const card = e.currentTarget;
+      const rect = card.getBoundingClientRect();
+      let x, y;
+
+      if (e.touches && e.touches.length > 0) {
+        x = e.touches[0].clientX - rect.left;
+        y = e.touches[0].clientY - rect.top;
+      } else {
+        x = e.clientX - rect.left;
+        y = e.clientY - rect.top;
+      }
+
+      const pointerFromLeft = x / rect.width;
+      const pointerFromTop = y / rect.height;
+
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const distX = x - centerX;
+      const distY = y - centerY;
+      const distance = Math.sqrt(distX * distX + distY * distY);
+
+      const maxDistance = Math.sqrt((rect.width / 2) ** 2 + (rect.height / 2) ** 2);
+      const pointerFromCenter = distance / maxDistance;
+      let opacity = 1 - (distance / maxDistance);
+      opacity = opacity ** 0.2;
+
+      const rotateX = (distY / rect.height) * 30;
+      const rotateY = (distX / rect.width) * -20;
+
+      card.style.setProperty('--pointer-x', `${x}px`);
+      card.style.setProperty('--pointer-y', `${y}px`);
+      card.style.setProperty('--pointer-from-left', pointerFromLeft);
+      card.style.setProperty('--pointer-from-top', pointerFromTop);
+      card.style.setProperty('--pointer-from-center', pointerFromCenter.toFixed(2));
+      card.style.setProperty('--card-opacity', opacity.toFixed(2));
+      card.style.setProperty('--rotate-x', `${rotateX}deg`);
+      card.style.setProperty('--rotate-y', `${rotateY}deg`);
     }
 
     // Handle pointer leave for holographic effect
     function handlePointerLeave(e) {
-      // [Your existing code for handling pointer leave]
+      const card = e.currentTarget;
+      card.style.setProperty('--card-opacity', 0);
+      card.style.setProperty('--rotate-x', '0deg');
+      card.style.setProperty('--rotate-y', '0deg');
     }
 
     // Show animation when a new card is collected
