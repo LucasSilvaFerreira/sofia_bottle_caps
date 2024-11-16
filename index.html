@@ -1,17 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-
-
-<audio controls autoplay>
-  <source src="assets/musica_uni.mp3" type="audio/mp3">
-</audio>
-
-
-
- 
   <meta charset="UTF-8">
-  <title>Sofia e os unicórnios</title>
+  <title>Sofia e os Unicórnios</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Include the html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -32,6 +23,7 @@
       background-image: url('assets/app_image.png'); /* Update with your app image */
       background-size: cover;
       background-position: center;
+      overflow: hidden; /* To contain particles */
     }
 
     h1 {
@@ -85,25 +77,35 @@
     .card {
       position: relative;
       width: calc(100% - 20px);
-      max-width: 367px;
+      max-width: 200px;
       height: auto;
-      aspect-ratio: 367 / 512;
+      aspect-ratio: 2 / 3;
       background-size: cover;
       background-position: center;
       border-radius: 18px;
       overflow: hidden;
       margin: 10px;
+      background-color: rgba(255, 255, 255, 0.1);
 
-      transition: transform 0.1s ease, box-shadow 0.3s ease, opacity 0.5s ease, background-color 0.5s ease;
+      transition: transform 0.1s ease, box-shadow 0.3s ease, opacity 0.5s ease;
       will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
 
       transform-style: preserve-3d;
       transform-origin: center;
     }
 
+    .card.locked {
+      background-image: url('assets/placeholder.png'); /* Placeholder image for locked cards */
+      filter: grayscale(100%);
+    }
+
+    .card.unlocked {
+      filter: none;
+    }
+
     .card:hover {
       transform: rotateX(var(--rotate-x, 0deg)) rotateY(var(--rotate-y, 0deg)) scale(1.05);
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 1); 
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 1);
     }
 
     .card__glare, .card__shine {
@@ -159,11 +161,30 @@
       transition: opacity 0.3s ease;
       will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
     }
+
+    /* Particle Styles */
+    .particle {
+      position: fixed;
+      font-size: 24px;
+      pointer-events: none;
+      animation: floatUp 1s ease-out forwards;
+    }
+
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-100px);
+      }
+    }
   </style>
 </head>
 <body>
 
-  <h1>unicórnios</h1>
+  <h1>Sofia e os Unicórnios</h1>
   <div id="buttons">
     <button id="scan-button">Scan QR Code</button>
     <button id="gallery-button">View Gallery</button>
@@ -173,6 +194,11 @@
     <!-- The QR scanner or gallery will be displayed here -->
   </div>
   <div id="progress">Loading images...</div>
+
+  <!-- Audio element -->
+  <audio id="background-music" loop>
+    <source src="assets/musica_uni.mp3" type="audio/mp3">
+  </audio>
 
   <script>
     // Number of total images
@@ -192,10 +218,17 @@
     const resetButton = document.getElementById('reset-button');
     const contentDiv = document.getElementById('content');
     const progressDiv = document.getElementById('progress');
+    const backgroundMusic = document.getElementById('background-music');
 
     // Event listeners for buttons
-    scanButton.addEventListener('click', startScan);
-    galleryButton.addEventListener('click', showGallery);
+    scanButton.addEventListener('click', () => {
+      startScan();
+      playMusic();
+    });
+    galleryButton.addEventListener('click', () => {
+      showGallery();
+      playMusic();
+    });
     resetButton.addEventListener('click', resetGallery);
 
     let html5QrCode;
@@ -221,6 +254,11 @@
         console.error('Error fetching images:', error);
         progressDiv.textContent = 'Failed to load images.';
       }
+    }
+
+    // Play background music
+    function playMusic() {
+      backgroundMusic.play();
     }
 
     // Start the QR code scanner
@@ -275,7 +313,7 @@
           // All images have been collected
           if (!allImagesCollected) {
             allImagesCollected = true;
-            alert('Congratulations! You have collected all images.');
+            alert('Parabéns! Você coletou todas as imagens.');
           }
         }
       } else {
@@ -287,37 +325,46 @@
     // Update the progress indicator
     function updateProgress() {
       let count = assignedImages.length;
-      progressDiv.textContent = `${count}/${TOTAL_IMAGES} images discovered`;
+      progressDiv.textContent = `${count}/${TOTAL_IMAGES} imagens descobertas`;
     }
 
     // Update the gallery with discovered images
     function updateGallery() {
       let gallery = document.getElementById('gallery');
       gallery.innerHTML = ''; // Clear existing images
-      assignedImages.forEach(src => {
-        // Create card element
+
+      for (let i = 0; i < TOTAL_IMAGES; i++) {
         let card = document.createElement('div');
         card.classList.add('card');
-        card.style.backgroundImage = `url(${src})`;
 
-        // Create glare and shine elements
-        let glare = document.createElement('div');
-        glare.classList.add('card__glare');
-        let shine = document.createElement('div');
-        shine.classList.add('card__shine');
+        if (assignedImages.includes(imagePlaceholders[i])) {
+          // Unlocked card
+          card.classList.add('unlocked');
+          card.style.backgroundImage = `url(${imagePlaceholders[i]})`;
 
-        // Append glare and shine to card
-        card.appendChild(glare);
-        card.appendChild(shine);
+          // Create glare and shine elements
+          let glare = document.createElement('div');
+          glare.classList.add('card__glare');
+          let shine = document.createElement('div');
+          shine.classList.add('card__shine');
 
-        // Add event listeners for holographic effect
-        card.addEventListener('pointermove', handlePointerMove);
-        card.addEventListener('touchmove', handlePointerMove);
-        card.addEventListener('mouseleave', handlePointerLeave);
-        card.addEventListener('touchend', handlePointerLeave);
+          // Append glare and shine to card
+          card.appendChild(glare);
+          card.appendChild(shine);
+
+          // Add event listeners for holographic effect
+          card.addEventListener('pointermove', handlePointerMove);
+          card.addEventListener('touchmove', handlePointerMove);
+          card.addEventListener('mouseleave', handlePointerLeave);
+          card.addEventListener('touchend', handlePointerLeave);
+        } else {
+          // Locked card
+          card.classList.add('locked');
+          card.style.backgroundImage = `url('assets/placeholder.png')`; // Placeholder image
+        }
 
         gallery.appendChild(card);
-      });
+      }
     }
 
     // Handle pointer move for holographic effect
@@ -372,10 +419,38 @@
 
     // Show animation when a new card is collected
     function showCollectAnimation(imageNumber) {
+      // Spawn particles
+      spawnParticles();
+
       // Optionally, implement a custom animation
-      alert(`You have collected a new card! (${imageNumber}/${TOTAL_IMAGES})`);
+      alert(`Você coletou uma nova carta! (${imageNumber}/${TOTAL_IMAGES})`);
+
       // Redirect to the gallery
       showGallery();
+    }
+
+    // Spawn particle effects
+    function spawnParticles() {
+      const emojis = ['🎁', '✨', '🎉', '💖', '🦄'];
+      const numParticles = 30;
+
+      for (let i = 0; i < numParticles; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        particle.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.top = '100%';
+        particle.style.fontSize = Math.random() * 24 + 16 + 'px';
+        particle.style.animationDelay = Math.random() * 0.5 + 's';
+
+        document.body.appendChild(particle);
+
+        // Remove particle after animation
+        particle.addEventListener('animationend', () => {
+          particle.remove();
+        });
+      }
     }
 
     // Save progress to localStorage
@@ -398,14 +473,14 @@
 
     // Reset the gallery and clear saved data
     function resetGallery() {
-      if (confirm('Are you sure you want to reset the progress? This will remove all collected cards.')) {
+      if (confirm('Você tem certeza de que deseja reiniciar o progresso? Isso removerá todas as cartas coletadas.')) {
         scannedCodes = [];
         assignedImages = [];
         allImagesCollected = false;
         saveProgress();
         updateProgress();
         contentDiv.innerHTML = ''; // Clear the content area
-        alert('Progress has been reset.');
+        alert('O progresso foi reiniciado.');
       }
     }
 
