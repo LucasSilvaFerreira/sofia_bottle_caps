@@ -7,12 +7,15 @@
   <!-- Include the html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
-    /* Your existing CSS styles here */
+    /* Import a nice font from Google Fonts */
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap');
+
     :root {
       --foil-brightness: 0.55;
     }
 
     body {
+      font-family: 'Montserrat', sans-serif;
       background-color: #151617;
       color: #fff;
       display: flex;
@@ -29,7 +32,7 @@
 
     h1 {
       margin-top: 20px;
-      font-size: 24px;
+      font-size: 32px;
       text-align: center;
       text-shadow: 1px 1px 2px #000;
     }
@@ -45,13 +48,13 @@
       font-size: 16px;
       border: none;
       color: white;
-      background-color: #2196F3;
+      background-color: #FF69B4;
       border-radius: 5px;
       cursor: pointer;
     }
 
     #buttons button:active {
-      background-color: #1976D2;
+      background-color: #FF1493;
     }
 
     #content {
@@ -63,10 +66,31 @@
       width: 100%;
     }
 
-    #progress {
+    #progress-container {
       margin: 20px 0;
+      width: 80%;
+      max-width: 500px;
+    }
+
+    #progress-text {
+      text-align: center;
+      margin-bottom: 10px;
       font-size: 18px;
       text-shadow: 1px 1px 2px #000;
+    }
+
+    #progress-bar {
+      width: 100%;
+      background-color: rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+
+    #progress-fill {
+      height: 20px;
+      background-color: #FF69B4;
+      width: 0%;
+      transition: width 0.5s ease;
     }
 
     #gallery {
@@ -78,7 +102,7 @@
     .card {
       position: relative;
       width: calc(100% - 20px);
-      max-width: 200px;
+      max-width: 150px;
       height: auto;
       aspect-ratio: 2 / 3;
       background-size: cover;
@@ -87,6 +111,7 @@
       overflow: hidden;
       margin: 10px;
       background-color: rgba(255, 255, 255, 0.1);
+      cursor: pointer;
 
       transition: transform 0.1s ease, box-shadow 0.3s ease, opacity 0.5s ease;
       will-change: transform, opacity, background-image, background-size, background-position, background-blend-mode, filter;
@@ -96,7 +121,7 @@
     }
 
     .card.locked {
-      background-image: url('assets/locked_placeholder.png'); /* Placeholder image for locked cards */
+      background-image: url('assets/locked.png'); /* Locked card image */
       filter: grayscale(100%);
     }
 
@@ -187,14 +212,21 @@
 
   <h1>Sofia e os Unicórnios</h1>
   <div id="buttons">
-    <button id="scan-button">Scan QR Code</button>
-    <button id="gallery-button">View Gallery</button>
-    <button id="reset-button">Reset Progress</button>
+    <button id="scan-button">Escanear QR Code</button>
+    <button id="gallery-button">Ver Galeria</button>
+    <button id="reset-button">Reiniciar Progresso</button>
   </div>
+
+  <div id="progress-container">
+    <div id="progress-text">0% coletado</div>
+    <div id="progress-bar">
+      <div id="progress-fill"></div>
+    </div>
+  </div>
+
   <div id="content">
     <!-- The QR scanner or gallery will be displayed here -->
   </div>
-  <div id="progress">Loading images...</div>
 
   <!-- Audio element -->
   <audio id="background-music" loop>
@@ -226,7 +258,8 @@
     const galleryButton = document.getElementById('gallery-button');
     const resetButton = document.getElementById('reset-button');
     const contentDiv = document.getElementById('content');
-    const progressDiv = document.getElementById('progress');
+    const progressText = document.getElementById('progress-text');
+    const progressFill = document.getElementById('progress-fill');
     const backgroundMusic = document.getElementById('background-music');
     const capturedSound = document.getElementById('captured-sound');
     const goodSound = document.getElementById('good-sound');
@@ -263,13 +296,13 @@
         updateProgress();
       } catch (error) {
         console.error('Error fetching images:', error);
-        progressDiv.textContent = 'Failed to load images.';
+        progressText.textContent = 'Falha ao carregar imagens.';
       }
     }
 
     // Play background music
     function playMusic() {
-      backgroundMusic.volume = 1.0; // Ensure volume is at maximum
+      backgroundMusic.volume = 1.0; // Ensure volume is at max
       backgroundMusic.play();
     }
 
@@ -300,7 +333,7 @@
       ).catch(err => {
         // Start failed, handle it.
         console.error('Unable to start scanning', err);
-        alert('Unable to access the camera. Please allow camera permissions.');
+        alert('Não foi possível acessar a câmera. Por favor, permita o acesso.');
       });
     }
 
@@ -330,14 +363,16 @@
         }
       } else {
         // QR code already scanned; do nothing or provide a subtle indication
-        console.log('QR code already scanned.');
+        console.log('QR code já escaneado.');
       }
     }
 
     // Update the progress indicator
     function updateProgress() {
       let count = assignedImages.length;
-      progressDiv.textContent = `${count}/${TOTAL_IMAGES} imagens descobertas`;
+      let percentage = Math.floor((count / TOTAL_IMAGES) * 100);
+      progressText.textContent = `${percentage}% coletado`;
+      progressFill.style.width = `${percentage}%`;
     }
 
     // Update the gallery with discovered images
@@ -372,7 +407,7 @@
         } else {
           // Locked card
           card.classList.add('locked');
-          card.style.backgroundImage = `url('assets/locked_placeholder.png')`; // Placeholder image
+          card.style.backgroundImage = `url('assets/locked.png')`; // Locked card image
         }
 
         gallery.appendChild(card);
@@ -437,6 +472,18 @@
       // Play capture sounds
       playCaptureSounds();
 
+      // Decrease background music volume
+      backgroundMusic.volume = 0.2;
+
+      // Restore volume after sounds finish
+      Promise.all([capturedSound.play(), goodSound.play()]).then(() => {
+        // Wait for the longest sound to finish
+        let longestDuration = Math.max(capturedSound.duration, goodSound.duration);
+        setTimeout(() => {
+          backgroundMusic.volume = 1.0;
+        }, longestDuration * 1000);
+      });
+
       // Optionally, implement a custom animation
       alert(`Você coletou uma nova carta! (${imageNumber}/${TOTAL_IMAGES})`);
 
@@ -444,31 +491,13 @@
       showGallery();
     }
 
-    // Play capture sounds and adjust background music volume
+    // Play capture sounds
     function playCaptureSounds() {
-      // Decrease background music volume
-      backgroundMusic.volume = 0.3; // Adjust as needed
-
-      // Reset playback to start
-      capturedSound.currentTime = 0;
-      goodSound.currentTime = 0;
+      capturedSound.currentTime = 0; // Reset to start
+      goodSound.currentTime = 0; // Reset to start
 
       capturedSound.play();
       goodSound.play();
-
-      // Create a function to restore volume after both sounds have ended
-      let soundsEnded = 0;
-
-      function checkSoundsEnded() {
-        soundsEnded++;
-        if (soundsEnded === 2) {
-          // Both sounds have ended, restore background music volume
-          backgroundMusic.volume = 1.0;
-        }
-      }
-
-      capturedSound.onended = checkSoundsEnded;
-      goodSound.onended = checkSoundsEnded;
     }
 
     // Spawn particle effects
