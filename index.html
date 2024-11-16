@@ -6,12 +6,13 @@
       var context = new AudioContext();
     }
     </script>
-    
-  <audio controls autoplay>
-    <source src="assets/music.mp3" type="audio/mp3">>
-  </audio>
 
 
+  <audio id="audioID" loop>  <source src="assets/music.mp3" type="audio/mp3"></audio>
+
+  <script>
+  var myaudio = document.getElementById("audioID").autoplay = true;
+  </script>
 
  
   <meta charset="UTF-8">
@@ -167,7 +168,7 @@
 </head>
 <body>
 
-  <h1>QR Code Holographic Gallery</h1>
+  <h1>unicórnios</h1>
   <div id="buttons">
     <button id="scan-button">Scan QR Code</button>
     <button id="gallery-button">View Gallery</button>
