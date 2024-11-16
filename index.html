@@ -27,7 +27,7 @@
       background-image: url('assets/app_image.png'); /* Update with your app image */
       background-size: cover;
       background-position: center;
-      overflow: hidden; /* To contain particles */
+      overflow-x: hidden; /* To contain particles */
     }
 
     h1 {
@@ -41,6 +41,8 @@
       margin: 20px 0;
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     #buttons button {
@@ -97,6 +99,8 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
+      overflow-y: auto;
+      max-height: 60vh; /* Adjust as needed */
     }
 
     .card {
@@ -121,7 +125,7 @@
     }
 
     .card.locked {
-      background-image: url('assets/locked.png'); /* Locked card image */
+      background-image: url('assets/cardback.png'); /* Placeholder for undiscovered cards */
       filter: grayscale(100%);
     }
 
@@ -206,6 +210,17 @@
         transform: translateY(-100px);
       }
     }
+
+    /* Hide scrollbar for Webkit browsers */
+    #gallery::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Hide scrollbar for other browsers */
+    #gallery {
+      -ms-overflow-style: none;  /* IE and Edge */
+      scrollbar-width: none;  /* Firefox */
+    }
   </style>
 </head>
 <body>
@@ -214,11 +229,12 @@
   <div id="buttons">
     <button id="scan-button">Escanear QR Code</button>
     <button id="gallery-button">Ver Galeria</button>
+    <button id="mute-button">🔊</button>
     <button id="reset-button">Reiniciar Progresso</button>
   </div>
 
   <div id="progress-container">
-    <div id="progress-text">0% coletado</div>
+    <div id="progress-text">0/0 cartas coletadas</div>
     <div id="progress-bar">
       <div id="progress-fill"></div>
     </div>
@@ -256,6 +272,7 @@
     // Get references to buttons and content area
     const scanButton = document.getElementById('scan-button');
     const galleryButton = document.getElementById('gallery-button');
+    const muteButton = document.getElementById('mute-button');
     const resetButton = document.getElementById('reset-button');
     const contentDiv = document.getElementById('content');
     const progressText = document.getElementById('progress-text');
@@ -263,6 +280,8 @@
     const backgroundMusic = document.getElementById('background-music');
     const capturedSound = document.getElementById('captured-sound');
     const goodSound = document.getElementById('good-sound');
+
+    let isMuted = false;
 
     // Event listeners for buttons
     scanButton.addEventListener('click', () => {
@@ -274,6 +293,7 @@
       playMusic();
     });
     resetButton.addEventListener('click', resetGallery);
+    muteButton.addEventListener('click', toggleMute);
 
     let html5QrCode;
 
@@ -302,8 +322,22 @@
 
     // Play background music
     function playMusic() {
-      backgroundMusic.volume = 1.0; // Ensure volume is at max
-      backgroundMusic.play();
+      if (!isMuted) {
+        backgroundMusic.volume = 1.0; // Ensure volume is at max
+        backgroundMusic.play();
+      }
+    }
+
+    // Toggle mute
+    function toggleMute() {
+      isMuted = !isMuted;
+      if (isMuted) {
+        backgroundMusic.pause();
+        muteButton.textContent = '🔇';
+      } else {
+        backgroundMusic.play();
+        muteButton.textContent = '🔊';
+      }
     }
 
     // Start the QR code scanner
@@ -371,7 +405,7 @@
     function updateProgress() {
       let count = assignedImages.length;
       let percentage = Math.floor((count / TOTAL_IMAGES) * 100);
-      progressText.textContent = `${percentage}% coletado`;
+      progressText.textContent = `${count}/${TOTAL_IMAGES} cartas coletadas`;
       progressFill.style.width = `${percentage}%`;
     }
 
@@ -407,7 +441,7 @@
         } else {
           // Locked card
           card.classList.add('locked');
-          card.style.backgroundImage = `url('assets/locked.png')`; // Locked card image
+          card.style.backgroundImage = `url('assets/cardback.png')`; // Placeholder image
         }
 
         gallery.appendChild(card);
@@ -473,14 +507,18 @@
       playCaptureSounds();
 
       // Decrease background music volume
-      backgroundMusic.volume = 0.2;
+      if (!isMuted) {
+        backgroundMusic.volume = 0.2;
+      }
 
       // Restore volume after sounds finish
       Promise.all([capturedSound.play(), goodSound.play()]).then(() => {
         // Wait for the longest sound to finish
         let longestDuration = Math.max(capturedSound.duration, goodSound.duration);
         setTimeout(() => {
-          backgroundMusic.volume = 1.0;
+          if (!isMuted) {
+            backgroundMusic.volume = 1.0;
+          }
         }, longestDuration * 1000);
       });
 
@@ -496,8 +534,10 @@
       capturedSound.currentTime = 0; // Reset to start
       goodSound.currentTime = 0; // Reset to start
 
-      capturedSound.play();
-      goodSound.play();
+      if (!isMuted) {
+        capturedSound.play();
+        goodSound.play();
+      }
     }
 
     // Spawn particle effects
