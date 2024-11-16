@@ -7,6 +7,8 @@
   <!-- Include the html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
+    /* Your existing CSS styles here */
+    /* ... */
     :root {
       --foil-brightness: 0.55;
     }
@@ -200,6 +202,14 @@
     <source src="assets/musica_uni.mp3" type="audio/mp3">
   </audio>
 
+  <!-- Hidden audio elements for capture sounds -->
+  <audio id="captured-sound">
+    <source src="assets/captured.mp3" type="audio/mp3">
+  </audio>
+  <audio id="good-sound">
+    <source src="assets/good.mp3" type="audio/mp3">
+  </audio>
+
   <script>
     // Number of total images
     let TOTAL_IMAGES = 0;
@@ -219,6 +229,8 @@
     const contentDiv = document.getElementById('content');
     const progressDiv = document.getElementById('progress');
     const backgroundMusic = document.getElementById('background-music');
+    const capturedSound = document.getElementById('captured-sound');
+    const goodSound = document.getElementById('good-sound');
 
     // Event listeners for buttons
     scanButton.addEventListener('click', () => {
@@ -422,11 +434,23 @@
       // Spawn particles
       spawnParticles();
 
+      // Play capture sounds
+      playCaptureSounds();
+
       // Optionally, implement a custom animation
       alert(`Você coletou uma nova carta! (${imageNumber}/${TOTAL_IMAGES})`);
 
       // Redirect to the gallery
       showGallery();
+    }
+
+    // Play capture sounds
+    function playCaptureSounds() {
+      capturedSound.currentTime = 0; // Reset to start
+      goodSound.currentTime = 0; // Reset to start
+
+      capturedSound.play();
+      goodSound.play();
     }
 
     // Spawn particle effects
