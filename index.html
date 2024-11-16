@@ -20,7 +20,7 @@
       min-height: 100vh;
       margin: 0;
       padding: 0;
-      background-image: url('https://raw.githubusercontent.com/LucasSilvaFerreira/sofia_bottle_caps/main/images/app/lucasferreira7182_httpss.mj.runZijTqA9kCHk_httpss.mj.runoveY4_aff76ff4-5436-4510-a440-934f4758cdeb_1%20(1).png');
+      background-image: url('images/app/lucasferreira7182_httpss.mj.runZijTqA9kCHk_httpss.mj.runoveY4_aff76ff4-5436-4510-a440-934f4758cdeb_1%20(1).png');
       background-size: cover;
       background-position: center;
     }
@@ -128,7 +128,7 @@
         radial-gradient(circle at var(--pointer-x) var(--pointer-y), #fff 5%, #000 50%, #fff 80%), 
         linear-gradient(-60deg, rgba(0,0,0,1) 15%, rgba(255,255,255,1), rgba(0,0,0,1) 85%),
         /* Foil texture image as base64 data URI */
-        url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...');
+        url('data:image/png;base64,iVBORw0KGgoAAA...'); /* Replace with your Base64-encoded foil texture */
       background-size: 
         120% 120%, 
         200% 200%, 
@@ -145,7 +145,7 @@
       opacity: calc((1.5 * var(--card-opacity)) - var(--pointer-from-center));
 
       /* Mask image as base64 data URI */
-      mask-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA...');
+      mask-image: url('data:image/png;base64,iVBORw0KGgoAAA...'); /* Replace with your Base64-encoded foil mask */
       mask-size: cover;
       mask-position: center center;
 
@@ -193,21 +193,19 @@
 
     let html5QrCode;
 
-    // Fetch images from GitHub repository using jsDelivr API
+    // Fetch images from cards.json
     async function fetchImages() {
-      const apiUrl = 'https://data.jsdelivr.com/v1/package/gh/LucasSilvaFerreira/sofia_bottle_caps@main/files/images/cards';
+      const jsonUrl = 'images/cards.json';
 
       try {
-        const response = await fetch(apiUrl);
+        const response = await fetch(jsonUrl);
         if (!response.ok) {
-          throw new Error('Failed to fetch images from jsDelivr API');
+          throw new Error('Failed to fetch images from cards.json');
         }
         const data = await response.json();
 
-        // Filter only image files
-        imagePlaceholders = data.files
-          .filter(item => !item.type && /\.(png|jpe?g|gif)$/i.test(item.name))
-          .map(item => 'https://cdn.jsdelivr.net/gh/LucasSilvaFerreira/sofia_bottle_caps@main/images/cards/' + item.name);
+        // Construct image URLs
+        imagePlaceholders = data.map(filename => 'images/cards/' + filename);
 
         TOTAL_IMAGES = imagePlaceholders.length;
         loadProgress();
