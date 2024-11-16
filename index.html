@@ -8,7 +8,6 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <style>
     /* Your existing CSS styles here */
-    /* ... */
     :root {
       --foil-brightness: 0.55;
     }
@@ -97,7 +96,7 @@
     }
 
     .card.locked {
-      background-image: url('assets/placeholder.png'); /* Placeholder image for locked cards */
+      background-image: url('assets/locked_placeholder.png'); /* Placeholder image for locked cards */
       filter: grayscale(100%);
     }
 
@@ -270,6 +269,7 @@
 
     // Play background music
     function playMusic() {
+      backgroundMusic.volume = 1.0; // Ensure volume is at maximum
       backgroundMusic.play();
     }
 
@@ -372,7 +372,7 @@
         } else {
           // Locked card
           card.classList.add('locked');
-          card.style.backgroundImage = `url('assets/placeholder.png')`; // Placeholder image
+          card.style.backgroundImage = `url('assets/locked_placeholder.png')`; // Placeholder image
         }
 
         gallery.appendChild(card);
@@ -444,13 +444,31 @@
       showGallery();
     }
 
-    // Play capture sounds
+    // Play capture sounds and adjust background music volume
     function playCaptureSounds() {
-      capturedSound.currentTime = 0; // Reset to start
-      goodSound.currentTime = 0; // Reset to start
+      // Decrease background music volume
+      backgroundMusic.volume = 0.3; // Adjust as needed
+
+      // Reset playback to start
+      capturedSound.currentTime = 0;
+      goodSound.currentTime = 0;
 
       capturedSound.play();
       goodSound.play();
+
+      // Create a function to restore volume after both sounds have ended
+      let soundsEnded = 0;
+
+      function checkSoundsEnded() {
+        soundsEnded++;
+        if (soundsEnded === 2) {
+          // Both sounds have ended, restore background music volume
+          backgroundMusic.volume = 1.0;
+        }
+      }
+
+      capturedSound.onended = checkSoundsEnded;
+      goodSound.onended = checkSoundsEnded;
     }
 
     // Spawn particle effects
