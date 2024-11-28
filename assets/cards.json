@@ -1,4 +1,4 @@
-[ "b1.jpeg",
+[ 
     "c1.png",
     "c2.png",
     "c3.png",
@@ -57,5 +57,6 @@
     "c56.png",
     "c57.png",
     "c58.png",
-    "c59.png"
+    "c59.png",
+    "b1.jpeg"
 ]
